@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Orders | Kanthari{% endblock %}
+{% block content %}
+<section>
+  <p class="text-xs uppercase tracking-[0.36em] text-amber-200/75">Customer account</p>
+  <h1 class="mt-3 text-5xl font-semibold text-stone-50">Your orders</h1>
+  <div class="mt-8 space-y-6">
+    {% for order in orders %}
+      <article class="kanthari-panel-soft rounded-[2rem] p-8">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 class="text-2xl font-semibold text-stone-50">Order #{{ order.id }}</h2>
+            <p class="mt-2 text-stone-400">{{ order.production_date }} | {{ order.fulfillment_type|title }} | {{ order.status.replace('_', ' ')|title }}</p>
+            <p class="mt-1 text-stone-400">Payment: {{ order.payment_method.replace('_', ' ')|title }} | Ref {{ order.transaction_reference }}</p>
+          </div>
+          <p class="text-2xl font-semibold text-amber-300">${{ '%.2f'|format(order.total_amount) }}</p>
+        </div>
+        <div class="mt-6 grid gap-4 lg:grid-cols-2">
+          <div class="rounded-[1.5rem] border border-white/10 bg-stone-900/60 p-5">
+            <h3 class="font-semibold">Items</h3>
+            <div class="mt-3 space-y-2 text-sm text-stone-300">
+              {% for item in order_details[order.id] %}
+                <p>{{ item.item_name }} | {{ item.variant_name }} | Qty {{ item.quantity }} | ${{ '%.2f'|format(item.line_total) }}</p>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="rounded-[1.5rem] border border-white/10 bg-stone-900/60 p-5">
+            <h3 class="font-semibold">Updates</h3>
+            <div class="mt-3 space-y-3 text-sm text-stone-300">
+              {% for note in notifications[order.id] %}
+                <div>
+                  <p class="font-medium text-stone-100">{{ note.subject }}</p>
+                  <p>{{ note.body }}</p>
+                </div>
+              {% else %}
+                <p>No updates yet.</p>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </article>
+    {% else %}
+      <div class="kanthari-panel-soft rounded-[2rem] p-8">
+        <p class="text-stone-300">No orders yet.</p>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

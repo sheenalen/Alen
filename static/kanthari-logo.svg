@@ -1,0 +1,16 @@
+<svg width="220" height="64" viewBox="0 0 220 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="220" height="64" rx="18" fill="#120D09"/>
+  <rect x="2" y="2" width="216" height="60" rx="16" stroke="#FBBF24" stroke-opacity="0.18"/>
+  <path d="M33.407 17.12C31.444 14.892 28.478 13.82 25.454 14.288C27.421 15.962 28.677 18.271 29.135 21.072C26.489 18.545 23.12 17.516 19.058 18.035C21.303 19.088 22.886 20.693 23.868 22.852C17.757 25.349 14.202 30.848 14.723 37.148C15.122 41.973 17.88 45.503 22.449 47.352C27.197 49.271 32.539 49.044 36.985 46.008C42.879 41.983 45.279 33.314 41.818 26.79C40.281 23.887 37.896 20.99 33.407 17.12Z" fill="url(#paint0_linear_18_9)"/>
+  <path d="M30.538 14.068C31.866 11.537 33.982 9.893 36.883 9.201C36.745 12.272 35.661 14.833 33.569 16.869" stroke="#86EFAC" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M29.917 24.297C32.336 26.713 33.097 29.588 32.336 32.915C31.506 36.54 29.598 39.204 26.62 40.934" stroke="#FFF7ED" stroke-width="2.1" stroke-linecap="round"/>
+  <circle cx="26.6" cy="30.8" r="1.75" fill="#FFF7ED"/>
+  <text x="56" y="29" fill="#FDE68A" font-family="Georgia, serif" font-size="12" letter-spacing="3.4">KAN</text>
+  <text x="56" y="48" fill="#FFF7ED" font-family="Georgia, serif" font-size="24" font-weight="700" letter-spacing="2.6">THARI</text>
+  <defs>
+    <linearGradient id="paint0_linear_18_9" x1="16" y1="16" x2="40" y2="46" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F97316"/>
+      <stop offset="1" stop-color="#DC2626"/>
+    </linearGradient>
+  </defs>
+</svg>

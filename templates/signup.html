@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Sign Up | Kanthari{% endblock %}
+{% block content %}
+<section class="mx-auto max-w-4xl">
+  <div class="grid gap-6 lg:grid-cols-[1fr_0.9fr]">
+    <div class="kanthari-panel-soft rounded-[2rem] p-8">
+      <p class="text-xs uppercase tracking-[0.36em] text-amber-200/75">Customer signup</p>
+      <h1 class="mt-4 text-4xl font-semibold text-stone-50">Create your account</h1>
+      <p class="mt-4 text-sm leading-6 text-stone-300">Sign up once to move through checkout faster, keep order history in one place, and receive status updates as each order moves into production and pickup readiness.</p>
+      <form method="post" class="mt-6 space-y-4">
+        <label class="block">
+          <span class="mb-2 block text-sm text-stone-300">Full name</span>
+          <input name="full_name" required class="kanthari-input w-full rounded-2xl px-4 py-3">
+        </label>
+        <label class="block">
+          <span class="mb-2 block text-sm text-stone-300">Email</span>
+          <input name="email" type="email" required class="kanthari-input w-full rounded-2xl px-4 py-3">
+        </label>
+        <label class="block">
+          <span class="mb-2 block text-sm text-stone-300">Password</span>
+          <input name="password" type="password" required class="kanthari-input w-full rounded-2xl px-4 py-3">
+        </label>
+        <button class="kanthari-button rounded-full bg-amber-400 px-6 py-3 font-medium text-stone-950">Sign up</button>
+      </form>
+    </div>
+    <div class="kanthari-panel rounded-[2rem] p-8">
+      <h2 class="text-3xl font-semibold text-stone-50">What you get</h2>
+      <div class="mt-6 space-y-4 text-sm leading-6 text-stone-300">
+        <div class="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
+          <p class="font-semibold text-stone-100">Self-serve checkout</p>
+          <p class="mt-2">Choose pickup or delivery, select payment method, and place the order without manual back-and-forth.</p>
+        </div>
+        <div class="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
+          <p class="font-semibold text-stone-100">Production updates</p>
+          <p class="mt-2">Track confirmation, in-production, and ready statuses directly in your account.</p>
+        </div>
+        <div class="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
+          <p class="font-semibold text-stone-100">Reusable order history</p>
+          <p class="mt-2">Review past orders, line items, and payment references whenever you need them.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

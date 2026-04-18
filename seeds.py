@@ -1,0 +1,185 @@
+from __future__ import annotations
+
+from typing import Any
+
+
+DELIVERY_ZONES = [
+    {"zip_code": "98004", "city": "Bellevue", "fee": 8.0},
+    {"zip_code": "98005", "city": "Bellevue", "fee": 8.0},
+    {"zip_code": "98006", "city": "Bellevue", "fee": 6.0},
+    {"zip_code": "98007", "city": "Bellevue", "fee": 8.0},
+    {"zip_code": "98008", "city": "Bellevue", "fee": 8.0},
+    {"zip_code": "98052", "city": "Redmond", "fee": 10.0},
+    {"zip_code": "98053", "city": "Redmond", "fee": 10.0},
+    {"zip_code": "98033", "city": "Kirkland", "fee": 10.0},
+    {"zip_code": "98034", "city": "Kirkland", "fee": 10.0},
+    {"zip_code": "98101", "city": "Seattle", "fee": 15.0},
+    {"zip_code": "98109", "city": "Seattle", "fee": 15.0},
+]
+
+
+PICKUP_SLOTS = [
+    {
+        "label": "Friday 5:30 pm - 10:00 pm",
+        "address": "4546 153rd Ave SE, Bellevue, WA 98006",
+    },
+    {
+        "label": "Saturday 12:30 pm - 6:00 pm",
+        "address": "4546 153rd Ave SE, Bellevue, WA 98006",
+    },
+    {
+        "label": "Sunday 12:00 pm - 2:30 pm",
+        "address": "4546 153rd Ave SE, Bellevue, WA 98006",
+    },
+    {
+        "label": "Sunday 3:15 pm - 3:55 pm",
+        "address": "St. Jude Catholic Church, 10526 166th Ave NE, Redmond, WA 98052",
+    },
+    {
+        "label": "Sunday 6:00 pm - 6:15 pm",
+        "address": "St. Jude Catholic Church, 10526 166th Ave NE, Redmond, WA 98052",
+    },
+    {
+        "label": "Monday after 12:00 pm",
+        "address": "4546 153rd Ave SE, Bellevue, WA 98006",
+    },
+]
+
+
+MENU_ITEMS: list[dict[str, Any]] = [
+    {
+        "name": "Kadumanga Pickle",
+        "slug": "kadumanga-pickle",
+        "category": "Pickles",
+        "description": "Tender raw mango pickle with mustard, chili, gingelly oil, and Kerala spices.",
+        "image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Kadumanga%20Mango%20pickle%20from%20Kerala%20India.jpg?width=900",
+        "image_credit": "Ranjithsiji",
+        "image_source": "https://commons.wikimedia.org/wiki/File:Kadumanga_Mango_pickle_from_Kerala_India.jpg",
+        "lead_time_days": 1,
+        "active": 1,
+        "ingredients": ["raw mango", "mustard seeds", "gingelly oil", "chili powder", "curry leaves"],
+        "variants": [{"name": "16 oz", "price": 15.0, "sku": "PICKLE-KADU-16"}],
+    },
+    {
+        "name": "Shrimp Pickle",
+        "slug": "shrimp-pickle",
+        "category": "Pickles",
+        "description": "Small wild shrimp, ginger, garlic, curry leaves, and sesame oil in a tangy Kerala pickle.",
+        "image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Prawn%20Pickle-Thoothukudi-Tamil%20Nadu-DED%20019.jpg?width=900",
+        "image_credit": "Lakshmi Sharath",
+        "image_source": "https://commons.wikimedia.org/wiki/File:Prawn_Pickle-Thoothukudi-Tamil_Nadu-DED_019.jpg",
+        "lead_time_days": 1,
+        "active": 1,
+        "ingredients": ["wild shrimp", "ginger", "garlic", "curry leaves", "gingelly oil", "chili powder"],
+        "variants": [{"name": "16 oz", "price": 25.0, "sku": "PICKLE-SHRIMP-16"}],
+    },
+    {
+        "name": "Tuna Fish Pickle",
+        "slug": "tuna-fish-pickle",
+        "category": "Pickles",
+        "description": "Fried tuna with kudampuli, ginger, garlic, natural vinegars, and aromatic spices.",
+        "image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Fish%20Moilee%20Kerala%20Style.JPG?width=900",
+        "image_credit": "Drsoumyadeepb",
+        "image_source": "https://commons.wikimedia.org/wiki/File:Fish_Moilee_Kerala_Style.JPG",
+        "lead_time_days": 1,
+        "active": 1,
+        "ingredients": ["tuna", "ginger", "garlic", "kudampuli", "coconut vinegar", "rice vinegar"],
+        "variants": [{"name": "16 oz", "price": 25.0, "sku": "PICKLE-TUNA-16"}],
+    },
+    {
+        "name": "Chicken Biryani",
+        "slug": "chicken-biryani",
+        "category": "Rice Specials",
+        "description": "Thalassery-style biryani with fragrant rice, masala chicken, fried onions, and raisins.",
+        "image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Malabar%20Chicken%20Biryani%20Kerala%20Style.jpg?width=900",
+        "image_credit": "Nita Abbey",
+        "image_source": "https://commons.wikimedia.org/wiki/File:Malabar_Chicken_Biryani_Kerala_Style.jpg",
+        "lead_time_days": 2,
+        "active": 1,
+        "ingredients": ["jeerakasala rice", "chicken", "ghee", "onion", "tomato", "yogurt", "raisins"],
+        "variants": [
+            {"name": "Half Tray", "price": 38.0, "sku": "BIRYANI-CHK-HALF"},
+            {"name": "Full Tray", "price": 72.0, "sku": "BIRYANI-CHK-FULL"},
+        ],
+    },
+    {
+        "name": "Beef Ularthiyathu",
+        "slug": "beef-ularthiyathu",
+        "category": "Curries",
+        "description": "Slow-roasted Kerala beef with coconut slivers, black pepper, shallots, and curry leaves.",
+        "image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Traditional%20Beef%20Ularthiyathu.JPG?width=900",
+        "image_credit": "Shobha Elizabeth John",
+        "image_source": "https://commons.wikimedia.org/wiki/File:Traditional_Beef_Ularthiyathu.JPG",
+        "lead_time_days": 2,
+        "active": 1,
+        "ingredients": ["beef", "coconut slices", "shallots", "black pepper", "curry leaves"],
+        "variants": [
+            {"name": "Family Pack", "price": 28.0, "sku": "CURRY-BEEF-FAM"},
+            {"name": "Party Tray", "price": 54.0, "sku": "CURRY-BEEF-PARTY"},
+        ],
+    },
+    {
+        "name": "Vegetable Stew",
+        "slug": "vegetable-stew",
+        "category": "Curries",
+        "description": "Creamy coconut-milk stew with potato, carrot, peas, green chili, and whole spices.",
+        "image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Appam%20and%20stew.jpg?width=900",
+        "image_credit": "Nithajay",
+        "image_source": "https://commons.wikimedia.org/wiki/File:Appam_and_stew.jpg",
+        "lead_time_days": 1,
+        "active": 1,
+        "ingredients": ["potato", "carrot", "peas", "coconut milk", "green chili", "cinnamon"],
+        "variants": [
+            {"name": "1 Liter", "price": 18.0, "sku": "CURRY-STEW-1L"},
+            {"name": "2 Liter", "price": 32.0, "sku": "CURRY-STEW-2L"},
+        ],
+    },
+    {
+        "name": "Pothichoru",
+        "slug": "pothichoru",
+        "category": "Meals",
+        "description": "Banana-leaf packed Kerala lunch with rice, thoran, mezhukkupuratti, pickle, and fish fry.",
+        "image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pothichoru.jpg?width=900",
+        "image_credit": "Kizakuni",
+        "image_source": "https://commons.wikimedia.org/wiki/File:Pothichoru.jpg",
+        "lead_time_days": 2,
+        "active": 1,
+        "ingredients": ["rice", "banana leaf", "beans", "cabbage", "pickle", "fish fillet"],
+        "variants": [
+            {"name": "Veg", "price": 16.0, "sku": "MEAL-POTHI-VEG"},
+            {"name": "Fish", "price": 20.0, "sku": "MEAL-POTHI-FISH"},
+        ],
+    },
+    {
+        "name": "Parotta",
+        "slug": "parotta",
+        "category": "Breads",
+        "description": "Flaky Malabar parotta, folded and pan-fried in classic roadside style.",
+        "image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Malabar%20Porotta.jpg?width=900",
+        "image_credit": "Praveen",
+        "image_source": "https://commons.wikimedia.org/wiki/File:Malabar_Porotta.jpg",
+        "lead_time_days": 1,
+        "active": 1,
+        "ingredients": ["maida", "egg", "oil", "salt"],
+        "variants": [
+            {"name": "6 Count", "price": 8.0, "sku": "BREAD-PAROTTA-6"},
+            {"name": "12 Count", "price": 14.0, "sku": "BREAD-PAROTTA-12"},
+        ],
+    },
+    {
+        "name": "Pazham Pori",
+        "slug": "pazham-pori",
+        "category": "Snacks",
+        "description": "Ripe banana fritters dipped in spiced batter and fried until crisp on the edges.",
+        "image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pazham%20Pori.jpg?width=900",
+        "image_credit": "Ayshamarjana",
+        "image_source": "https://commons.wikimedia.org/wiki/File:Pazham_Pori.jpg",
+        "lead_time_days": 1,
+        "active": 1,
+        "ingredients": ["nendran banana", "flour", "turmeric", "sugar", "oil"],
+        "variants": [
+            {"name": "8 Pieces", "price": 10.0, "sku": "SNACK-PAZHAM-8"},
+            {"name": "16 Pieces", "price": 18.0, "sku": "SNACK-PAZHAM-16"},
+        ],
+    },
+]

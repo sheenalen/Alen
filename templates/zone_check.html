@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Zone Check | Kanthari{% endblock %}
+{% block content %}
+<section class="mx-auto max-w-3xl rounded-[2rem] border border-white/10 bg-white/5 p-8 backdrop-blur">
+  <p class="text-xs uppercase tracking-[0.36em] text-amber-200/75">Delivery lookup</p>
+  <h1 class="mt-3 text-4xl font-semibold text-stone-50">Delivery zone check</h1>
+  <p class="mt-3 text-sm leading-6 text-stone-300">Enter a zip code to confirm whether delivery is available and what delivery fee applies.</p>
+  <form method="get" class="mt-6 flex flex-col gap-3 sm:flex-row">
+    <input name="zip_code" value="{{ zip_code }}" placeholder="98006" class="kanthari-input flex-1 rounded-2xl px-4 py-3">
+    <button class="kanthari-button rounded-full bg-amber-400 px-6 py-3 font-medium text-stone-950">Check</button>
+  </form>
+  {% if zip_code %}
+    <div class="mt-6 rounded-2xl border border-white/10 bg-stone-900/60 p-5">
+      {% if zone %}
+        <p class="text-lg font-semibold text-emerald-200">Delivery available for {{ zone.city }} ({{ zone.zip_code }})</p>
+        <p class="mt-2 text-stone-300">Delivery fee: ${{ '%.2f'|format(zone.fee) }}</p>
+      {% else %}
+        <p class="text-lg font-semibold text-red-200">Delivery not available for {{ zip_code }}</p>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

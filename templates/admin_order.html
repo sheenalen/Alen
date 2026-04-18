@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Order {{ order.id }} | Admin{% endblock %}
+{% block content %}
+<section class="grid gap-8 xl:grid-cols-[0.9fr_1.1fr]">
+  <div class="kanthari-panel rounded-[2rem] p-8">
+    <p class="text-xs uppercase tracking-[0.36em] text-amber-200/75">Order management</p>
+    <h1 class="mt-3 text-4xl font-semibold">Order #{{ order.id }}</h1>
+    <div class="mt-6 space-y-3 text-stone-300">
+      <p><span class="text-stone-500">Customer:</span> {{ order.customer_name }} ({{ order.customer_email }})</p>
+      <p><span class="text-stone-500">Phone:</span> {{ order.customer_phone }}</p>
+      <p><span class="text-stone-500">Production date:</span> {{ order.production_date }}</p>
+      <p><span class="text-stone-500">Fulfillment:</span> {{ order.fulfillment_type|title }}</p>
+      <p><span class="text-stone-500">Pickup:</span> {{ order.pickup_label or 'n/a' }}</p>
+      <p><span class="text-stone-500">Delivery:</span> {{ order.delivery_address or 'n/a' }}</p>
+      <p><span class="text-stone-500">Payment:</span> {{ order.payment_method.replace('_', ' ')|title }} | {{ order.transaction_reference }}</p>
+      <p><span class="text-stone-500">Subtotal:</span> ${{ '%.2f'|format(order.subtotal) }}</p>
+      <p><span class="text-stone-500">Delivery fee:</span> ${{ '%.2f'|format(order.delivery_fee) }}</p>
+      <p><span class="text-stone-500">Total:</span> ${{ '%.2f'|format(order.total_amount) }}</p>
+    </div>
+    <form method="post" class="mt-6 space-y-4">
+      <label class="block">
+        <span class="mb-2 block text-sm text-stone-300">Status</span>
+        <select name="status" class="kanthari-input w-full rounded-2xl px-4 py-3">
+          {% for status in statuses %}
+            <option value="{{ status }}" {% if status == order.status %}selected{% endif %}>{{ status.replace('_', ' ')|title }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button class="kanthari-button rounded-full bg-amber-400 px-6 py-3 font-medium text-stone-950">Update order</button>
+    </form>
+  </div>
+
+  <div class="space-y-8">
+    <div class="kanthari-panel-soft rounded-[2rem] p-8">
+      <h2 class="text-2xl font-semibold">Items</h2>
+      <div class="mt-5 space-y-4">
+        {% for item in items %}
+          <div class="rounded-2xl border border-white/10 bg-stone-900/60 p-5">
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <p class="font-semibold">{{ item.item_name }}</p>
+                <p class="mt-1 text-sm text-stone-400">{{ item.variant_name }} | Qty {{ item.quantity }}</p>
+              </div>
+              <p class="text-lg font-semibold text-amber-300">${{ '%.2f'|format(item.line_total) }}</p>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="kanthari-panel-soft rounded-[2rem] p-8">
+      <h2 class="text-2xl font-semibold">Notification log</h2>
+      <div class="mt-5 space-y-4 text-sm text-stone-300">
+        {% for note in notifications %}
+          <div class="rounded-2xl border border-white/10 bg-stone-900/60 p-5">
+            <p class="font-semibold text-stone-100">{{ note.subject }}</p>
+            <p class="mt-2">{{ note.body }}</p>
+            <p class="mt-2 text-xs text-stone-500">{{ note.created_at }}</p>
+          </div>
+        {% else %}
+          <p class="text-stone-400">No notifications yet.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

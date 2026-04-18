@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Login | Kanthari{% endblock %}
+{% block content %}
+<section class="mx-auto max-w-4xl">
+  <div class="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+    <div class="kanthari-panel rounded-[2rem] p-8">
+      <p class="text-xs uppercase tracking-[0.36em] text-amber-200/75">Welcome back</p>
+      <h1 class="mt-4 text-4xl font-semibold text-stone-50">Sign in to manage orders or place your next one.</h1>
+      <p class="mt-4 text-sm leading-6 text-stone-300">Accounts unlock checkout, order history, notification updates, and the admin dashboard for the seeded owner account.</p>
+      <div class="mt-8 rounded-[1.6rem] border border-white/10 bg-white/5 p-5 text-sm text-stone-300">
+        <p class="font-semibold text-stone-100">Admin seed account</p>
+        <p class="mt-2">{{ "admin@kanthari.local" }}</p>
+        <p>{{ "admin123" }}</p>
+      </div>
+    </div>
+    <div class="kanthari-panel-soft rounded-[2rem] p-8">
+      <h2 class="text-3xl font-semibold text-stone-50">Sign in</h2>
+      <form method="post" class="mt-6 space-y-4">
+        <label class="block">
+          <span class="mb-2 block text-sm text-stone-300">Email</span>
+          <input name="email" type="email" required class="kanthari-input w-full rounded-2xl px-4 py-3">
+        </label>
+        <label class="block">
+          <span class="mb-2 block text-sm text-stone-300">Password</span>
+          <input name="password" type="password" required class="kanthari-input w-full rounded-2xl px-4 py-3">
+        </label>
+        <button class="kanthari-button rounded-full bg-amber-400 px-6 py-3 font-medium text-stone-950">Sign in</button>
+      </form>
+      <p class="mt-6 text-sm text-stone-400">No account yet? <a href="{{ url_for('signup') }}" class="text-amber-200 underline decoration-white/20 underline-offset-4">Create one here</a>.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}

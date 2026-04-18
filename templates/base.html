@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Kanthari{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              display: ['"Palatino Linotype"', '"Book Antiqua"', 'Palatino', 'serif'],
+              body: ['"Palatino Linotype"', '"Book Antiqua"', 'Palatino', 'serif']
+            },
+            colors: {
+              ember: {
+                50: '#fff7e8',
+                100: '#fde7b2',
+                200: '#f7cf7f',
+                300: '#f4b544',
+                400: '#f59e0b'
+              }
+            }
+          }
+        }
+      };
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  </head>
+  <body class="font-body text-stone-100">
+    <div class="kanthari-shell">
+      <div class="kanthari-grid absolute inset-0 -z-10 opacity-40"></div>
+      <header class="sticky top-0 z-30 border-b border-white/10 bg-stone-950/75 backdrop-blur-xl">
+        <nav class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-6">
+          <a href="{{ url_for('index') }}" class="flex items-center gap-3">
+            <img src="{{ url_for('static', filename='kanthari-logo.svg') }}" alt="Kanthari" class="h-12 w-auto">
+            <div class="hidden sm:block">
+              <p class="text-xs uppercase tracking-[0.42em] text-amber-200/70">Kerala Catering</p>
+              <p class="mt-1 text-lg font-semibold text-stone-50">Kanthari</p>
+            </div>
+          </a>
+          <div class="flex flex-wrap items-center justify-end gap-2 text-sm text-stone-300 sm:gap-3">
+            <a href="{{ url_for('menu') }}" class="rounded-full px-3 py-2 transition hover:bg-white/5 hover:text-stone-100">Menu</a>
+            <a href="{{ url_for('zone_check') }}" class="rounded-full px-3 py-2 transition hover:bg-white/5 hover:text-stone-100">Delivery</a>
+            <a href="{{ url_for('cart') }}" class="relative flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-stone-100">
+              <svg aria-hidden="true" viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current stroke-[1.8]">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 4h2l2.2 10.2a1 1 0 0 0 1 .8h8.8a1 1 0 0 0 1-.8L20 7H7.1" />
+                <circle cx="10" cy="19" r="1.5" />
+                <circle cx="17" cy="19" r="1.5" />
+              </svg>
+              <span class="hidden sm:inline">Cart</span>
+              <span id="cart-count-badge" class="{% if not cart_count %}hidden {% endif %}inline-flex min-w-5 items-center justify-center rounded-full bg-amber-400 px-1.5 py-0.5 text-xs font-semibold text-stone-950">{{ cart_count }}</span>
+            </a>
+            {% if current_user %}
+              <a href="{{ url_for('orders') }}" class="rounded-full px-3 py-2 transition hover:bg-white/5 hover:text-stone-100">Orders</a>
+              {% if current_user.is_admin %}
+                <a href="{{ url_for('admin_dashboard') }}" class="rounded-full border border-amber-400/25 bg-amber-400/10 px-4 py-2 text-amber-100">Admin</a>
+              {% endif %}
+              <a href="{{ url_for('logout') }}" class="rounded-full px-3 py-2 transition hover:bg-white/5 hover:text-stone-100">Logout</a>
+            {% else %}
+              <a href="{{ url_for('login') }}" class="rounded-full px-3 py-2 transition hover:bg-white/5 hover:text-stone-100">Login</a>
+              <a href="{{ url_for('signup') }}" class="rounded-full border border-amber-400/40 bg-amber-400/10 px-4 py-2 text-amber-100">Sign up</a>
+            {% endif %}
+          </div>
+        </nav>
+      </header>
+      <main class="mx-auto max-w-7xl px-5 py-8 sm:px-6 sm:py-10">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="mb-8 space-y-2">
+              {% for category, message in messages %}
+                <div class="rounded-2xl border px-4 py-3 {% if category == 'error' %}border-red-500/40 bg-red-500/10 text-red-100{% else %}border-emerald-500/30 bg-emerald-500/10 text-emerald-100{% endif %}">
+                  {{ message }}
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </body>
+</html>

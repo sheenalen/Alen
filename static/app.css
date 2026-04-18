@@ -1,0 +1,127 @@
+:root {
+  --kanthari-ink: #f5f2ea;
+  --kanthari-line: rgba(255, 244, 224, 0.14);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  color: var(--kanthari-ink);
+  background:
+    radial-gradient(circle at top left, rgba(201, 68, 26, 0.28), transparent 26%),
+    radial-gradient(circle at 78% 18%, rgba(245, 158, 11, 0.2), transparent 24%),
+    linear-gradient(180deg, #1d0d08 0%, #120905 48%, #0c0705 100%);
+  background-attachment: fixed;
+}
+
+input,
+select,
+textarea,
+button {
+  outline: none;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.45);
+}
+
+.kanthari-shell {
+  position: relative;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.kanthari-shell::before,
+.kanthari-shell::after {
+  content: "";
+  position: fixed;
+  z-index: -2;
+  pointer-events: none;
+  border-radius: 999px;
+  filter: blur(14px);
+}
+
+.kanthari-shell::before {
+  top: 6rem;
+  left: -5rem;
+  width: 16rem;
+  height: 16rem;
+  background: rgba(201, 68, 26, 0.18);
+}
+
+.kanthari-shell::after {
+  right: -4rem;
+  bottom: 10rem;
+  width: 18rem;
+  height: 18rem;
+  background: rgba(245, 158, 11, 0.14);
+}
+
+.kanthari-grid {
+  background-image:
+    linear-gradient(rgba(255, 244, 224, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 244, 224, 0.035) 1px, transparent 1px);
+  background-size: 72px 72px;
+}
+
+.kanthari-panel {
+  border: 1px solid var(--kanthari-line);
+  background: linear-gradient(180deg, rgba(58, 31, 18, 0.78), rgba(25, 13, 8, 0.88));
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.24);
+}
+
+.kanthari-panel-soft {
+  border: 1px solid rgba(255, 244, 224, 0.09);
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(14px);
+}
+
+.kanthari-chip {
+  border: 1px solid rgba(251, 191, 36, 0.18);
+  background: rgba(251, 191, 36, 0.08);
+  color: #fde7b2;
+}
+
+.kanthari-input {
+  border: 1px solid rgba(255, 244, 224, 0.12);
+  background: rgba(15, 7, 4, 0.84);
+  color: var(--kanthari-ink);
+}
+
+.kanthari-input::placeholder {
+  color: rgba(224, 214, 196, 0.4);
+}
+
+.kanthari-button {
+  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.kanthari-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.24);
+}
+
+.kanthari-fade-up {
+  animation: kanthariFadeUp 500ms ease both;
+}
+
+.kanthari-fade-up-delay {
+  animation: kanthariFadeUp 700ms ease both;
+}
+
+@keyframes kanthariFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

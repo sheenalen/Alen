@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Kanthari | Kerala Catering{% endblock %}
+{% block content %}
+<section class="grid gap-8 lg:grid-cols-[1.25fr_0.75fr] lg:items-stretch">
+  <div class="kanthari-panel rounded-[2rem] p-8 sm:p-10 kanthari-fade-up">
+    <p class="text-xs uppercase tracking-[0.42em] text-amber-200/75">Kerala storefront</p>
+    <h1 class="mt-5 max-w-4xl font-display text-5xl leading-tight text-stone-50 sm:text-6xl">A polished catering website for Kanthari's pickles, meals, snacks, and party trays.</h1>
+    <p class="mt-6 max-w-3xl text-lg leading-8 text-stone-300">The site turns the brief in `kanthari.md` into a working customer storefront with account signup, self-serve ordering, date-aware prep windows, delivery checks, transaction tracking, and an admin console for production planning.</p>
+    <div class="mt-8 flex flex-wrap gap-3">
+      <a href="{{ url_for('menu') }}" class="kanthari-button rounded-full bg-amber-400 px-6 py-3 font-medium text-stone-950">Browse menu</a>
+      <a href="{{ url_for('signup') }}" class="kanthari-button rounded-full border border-white/15 bg-white/5 px-6 py-3 font-medium text-stone-100">Create account</a>
+      <a href="{{ url_for('zone_check') }}" class="kanthari-button rounded-full border border-amber-400/25 bg-amber-400/10 px-6 py-3 font-medium text-amber-100">Check delivery</a>
+    </div>
+    <div class="mt-10 grid gap-4 sm:grid-cols-3">
+      <div class="kanthari-panel-soft rounded-[1.6rem] p-5">
+        <p class="text-sm text-stone-400">Active menu items</p>
+        <p class="mt-2 text-3xl font-semibold text-stone-50">{{ summary.active_items }}</p>
+      </div>
+      <div class="kanthari-panel-soft rounded-[1.6rem] p-5">
+        <p class="text-sm text-stone-400">Menu categories</p>
+        <p class="mt-2 text-3xl font-semibold text-stone-50">{{ summary.category_count }}</p>
+      </div>
+      <div class="kanthari-panel-soft rounded-[1.6rem] p-5">
+        <p class="text-sm text-stone-400">Starting at</p>
+        <p class="mt-2 text-3xl font-semibold text-stone-50">${{ '%.2f'|format(summary.starting_price or 0) }}</p>
+      </div>
+    </div>
+  </div>
+  <aside class="kanthari-panel-soft rounded-[2rem] p-7 kanthari-fade-up-delay">
+    <p class="text-xs uppercase tracking-[0.35em] text-amber-200/70">Owner flow</p>
+    <h2 class="mt-3 text-2xl font-semibold text-stone-50">Pickup windows and operations-ready tooling.</h2>
+    <div class="mt-6 space-y-4">
+      {% for slot in pickup_slots %}
+        <div class="rounded-[1.4rem] border border-white/10 bg-stone-950/45 p-4">
+          <p class="font-medium text-stone-100">{{ slot.label }}</p>
+          <p class="mt-1 text-sm leading-6 text-stone-400">{{ slot.address }}</p>
+        </div>
+      {% endfor %}
+    </div>
+    <div class="mt-6 space-y-3 text-sm leading-6 text-stone-300">
+      <p>Customers can place pickup or delivery orders, choose payment method, and review updates in their order history.</p>
+      <p>Admins get daily prep totals, Costco ingredient rollups, order details, and profit snapshots calculated at 40% food cost.</p>
+    </div>
+  </aside>
+</section>
+
+<section class="mt-16">
+  <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="text-xs uppercase tracking-[0.35em] text-amber-200/75">Featured menu</p>
+      <h2 class="mt-2 text-3xl font-semibold text-stone-50">Seeded storefront catalog</h2>
+    </div>
+    <a href="{{ url_for('menu') }}" class="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm text-stone-100">See full menu</a>
+  </div>
+  <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+    {% for item in featured[:6] %}
+      <article class="kanthari-panel-soft rounded-[1.8rem] p-6">
+        <p class="text-xs uppercase tracking-[0.28em] text-stone-400">{{ item.category }}</p>
+        <h3 class="mt-3 text-2xl font-semibold text-stone-50">{{ item.name }}</h3>
+        <p class="mt-3 min-h-24 text-sm leading-6 text-stone-300">{{ item.description }}</p>
+        <div class="mt-5 flex items-center justify-between">
+          <span class="kanthari-chip rounded-full px-3 py-1 text-xs uppercase tracking-[0.2em]">{{ item.variant_name }}</span>
+          <span class="text-xl font-semibold text-amber-200">${{ '%.2f'|format(item.price) }}</span>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="mt-16 grid gap-6 lg:grid-cols-3">
+  <div class="kanthari-panel-soft rounded-[1.8rem] p-6">
+    <p class="text-xs uppercase tracking-[0.3em] text-amber-200/75">Customer flow</p>
+    <h3 class="mt-3 text-2xl font-semibold text-stone-50">Browse, schedule, and pay.</h3>
+    <p class="mt-4 text-sm leading-6 text-stone-300">Every menu card supports portion variants and a production date that respects lead time. Checkout supports pickup, delivery, and multiple payment methods.</p>
+  </div>
+  <div class="kanthari-panel-soft rounded-[1.8rem] p-6">
+    <p class="text-xs uppercase tracking-[0.3em] text-amber-200/75">Production flow</p>
+    <h3 class="mt-3 text-2xl font-semibold text-stone-50">Prep counts by day.</h3>
+    <p class="mt-4 text-sm leading-6 text-stone-300">The admin dashboard rolls orders up into production totals and shopping demand so the owner sees exactly what needs to be made and bought.</p>
+  </div>
+  <div class="kanthari-panel-soft rounded-[1.8rem] p-6">
+    <p class="text-xs uppercase tracking-[0.3em] text-amber-200/75">Transaction flow</p>
+    <h3 class="mt-3 text-2xl font-semibold text-stone-50">Order details stay visible.</h3>
+    <p class="mt-4 text-sm leading-6 text-stone-300">Each order stores line items, payment method, transaction reference, status changes, and customer-facing notification history.</p>
+  </div>
+</section>
+{% endblock %}

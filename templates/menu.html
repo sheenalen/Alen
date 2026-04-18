@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Menu | Kanthari{% endblock %}
+{% block content %}
+<section class="kanthari-panel rounded-[2rem] p-8 sm:p-10">
+  <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+    <div>
+      <p class="text-xs uppercase tracking-[0.42em] text-amber-200/75">Storefront menu</p>
+      <h1 class="mt-4 font-display text-5xl leading-tight text-stone-50">Kerala dishes organized for fast self-serve ordering.</h1>
+      <p class="mt-4 max-w-3xl text-base leading-7 text-stone-300">Customers can choose a portion variant, quantity, and production date on every item card. Lead time is enforced per item, and the assistant can add items to cart from plain-language requests.</p>
+    </div>
+    <div class="grid gap-3 sm:grid-cols-3">
+      {% for category, items in grouped_items.items() %}
+        <a href="#{{ category|lower|replace(' ', '-') }}" class="kanthari-chip rounded-full px-4 py-2 text-center text-xs uppercase tracking-[0.24em]">{{ category }} · {{ items|length }}</a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="mt-8 rounded-[1.5rem] border border-amber-300/15 bg-white/5 p-5 backdrop-blur">
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div>
+      <p class="text-xs uppercase tracking-[0.24em] text-amber-300">Order Assistant</p>
+      <h2 class="mt-1 text-xl font-semibold text-stone-100">Chat to browse menu items and add them to cart.</h2>
+      <p class="mt-1 text-sm leading-6 text-stone-400">Examples: <span class="text-stone-300">show pickles</span>, <span class="text-stone-300">add 2 pazham pori tomorrow</span>, <span class="text-stone-300">add chicken biryani half tray 2026-04-20</span>.</p>
+    </div>
+    <button type="button" id="assistant-toggle" class="kanthari-button shrink-0 rounded-full bg-amber-400 px-5 py-2.5 text-sm font-medium text-stone-950">Open chat</button>
+  </div>
+  <div id="assistant-panel" class="mt-4 hidden rounded-[1rem] border border-white/10 bg-stone-950/70 p-4">
+    <div id="assistant-messages" class="max-h-72 space-y-3 overflow-y-auto pr-1">
+      <div class="max-w-[85%] rounded-2xl rounded-tl-sm bg-white/5 px-4 py-3 text-sm text-stone-200">
+        I can list menu items, show categories, and add matched items to your cart.
+      </div>
+    </div>
+    <form id="assistant-form" class="mt-4 flex gap-2">
+      <input id="assistant-input" type="text" placeholder="Type your order request..." class="kanthari-input flex-1 rounded-full px-4 py-3 text-sm">
+      <button class="kanthari-button rounded-full bg-amber-400 px-5 py-3 text-sm font-medium text-stone-950">Send</button>
+    </form>
+  </div>
+</section>
+
+<section class="mt-8 space-y-8">
+  {% for category, items in grouped_items.items() %}
+    <div id="{{ category|lower|replace(' ', '-') }}">
+      <div class="mb-4 flex items-center gap-3">
+        <h2 class="text-2xl font-semibold text-amber-200">{{ category }}</h2>
+        <span class="rounded-full border border-white/10 px-2.5 py-1 text-[11px] uppercase tracking-[0.18em] text-stone-400">{{ items|length }} items</span>
+      </div>
+      <div class="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+        {% for item in items %}
+          {% set media = menu_media.get(item.slug) %}
+          <article class="overflow-hidden rounded-[1.4rem] border border-white/10 bg-white/5 backdrop-blur">
+            <div class="grid grid-cols-1 sm:grid-cols-[140px_minmax(0,1fr)]">
+              {% if media and media.image_url %}
+                <div class="h-full border-b border-white/10 bg-stone-900/70 sm:border-b-0 sm:border-r">
+                  <img
+                    src="{{ media.image_url }}"
+                    alt="{{ item.name }}"
+                    loading="lazy"
+                    class="h-full min-h-[160px] w-full object-cover"
+                  >
+                </div>
+              {% else %}
+                <div class="flex min-h-[160px] items-center justify-center border-b border-white/10 bg-stone-900/70 text-xs uppercase tracking-[0.2em] text-stone-500 sm:border-b-0 sm:border-r">
+                  Kanthari
+                </div>
+              {% endif %}
+              <div class="p-4">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <h3 class="text-lg font-semibold leading-tight text-stone-100">{{ item.name }}</h3>
+                    <p class="mt-1 text-[11px] uppercase tracking-[0.18em] text-stone-500">{{ item.category }}</p>
+                  </div>
+                  <span class="whitespace-nowrap rounded-full border border-amber-400/20 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-amber-300">{{ item.lead_time_days }}d</span>
+                </div>
+                <p class="mt-2 text-sm leading-5 text-stone-300">{{ item.description[:110] }}{% if item.description|length > 110 %}...{% endif %}</p>
+                {% if media and media.image_source %}
+                  <p class="mt-2 text-[11px] text-stone-500">
+                    <a href="{{ media.image_source }}" target="_blank" rel="noreferrer" class="text-stone-400 underline decoration-white/20 underline-offset-2">
+                      Photo: {{ media.image_credit or "Wikimedia Commons" }}
+                    </a>
+                  </p>
+                {% endif %}
+                <form action="{{ url_for('add_to_cart') }}" method="post" class="mt-3 grid gap-2">
+                  <input type="hidden" name="menu_item_id" value="{{ item.id }}">
+                  <select name="variant_id" class="kanthari-input w-full rounded-xl px-3 py-2 text-sm">
+                    {% for variant in item_variants[item.id] %}
+                      <option value="{{ variant.id }}">{{ variant.name }} - ${{ '%.2f'|format(variant.price) }}</option>
+                    {% endfor %}
+                  </select>
+                  <div class="grid gap-2 sm:grid-cols-[70px_minmax(0,1fr)_auto]">
+                    <input name="quantity" type="number" min="1" value="1" aria-label="Quantity" class="kanthari-input w-full rounded-xl px-2.5 py-2 text-sm">
+                    <input name="production_date" type="date" min="{{ today }}" max="{{ max_order_date }}" value="{{ default_order_date }}" required aria-label="Production date" class="kanthari-input w-full rounded-xl px-2.5 py-2 text-sm">
+                    <button class="kanthari-button rounded-full bg-amber-400 px-4 py-2 text-sm font-medium text-stone-950">Add</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    </div>
+  {% endfor %}
+</section>
+<script>
+  (() => {
+    const toggle = document.getElementById("assistant-toggle");
+    const panel = document.getElementById("assistant-panel");
+    const form = document.getElementById("assistant-form");
+    const input = document.getElementById("assistant-input");
+    const messages = document.getElementById("assistant-messages");
+    const cartBadge = document.getElementById("cart-count-badge");
+
+    const addMessage = (text, role) => {
+      const bubble = document.createElement("div");
+      bubble.className = role === "user"
+        ? "ml-auto max-w-[85%] rounded-2xl rounded-tr-sm bg-amber-400 px-4 py-3 text-sm text-stone-950"
+        : "max-w-[85%] rounded-2xl rounded-tl-sm bg-white/5 px-4 py-3 text-sm text-stone-200";
+      bubble.textContent = text;
+      messages.appendChild(bubble);
+      messages.scrollTop = messages.scrollHeight;
+    };
+
+    toggle?.addEventListener("click", () => {
+      panel.classList.toggle("hidden");
+      toggle.textContent = panel.classList.contains("hidden") ? "Open chat" : "Close chat";
+      if (!panel.classList.contains("hidden")) {
+        input.focus();
+      }
+    });
+
+    form?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+      addMessage(text, "user");
+      input.value = "";
+
+      try {
+        const response = await fetch("{{ url_for('chat_assistant') }}", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({message: text})
+        });
+        const data = await response.json();
+        addMessage(data.reply || "I couldn't process that.", "assistant");
+        if (cartBadge && typeof data.cart_count === "number") {
+          cartBadge.textContent = String(data.cart_count);
+          if (data.cart_count > 0) {
+            cartBadge.classList.remove("hidden");
+          } else {
+            cartBadge.classList.add("hidden");
+          }
+        }
+      } catch (error) {
+        addMessage("The order assistant is unavailable right now.", "assistant");
+      }
+    });
+  })();
+</script>
+{% endblock %}
