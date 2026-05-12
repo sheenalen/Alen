@@ -24,6 +24,8 @@ class KanthariAppTests(unittest.TestCase):
             kanthari_app.create_schema()
             kanthari_app.seed_database()
 
+        kanthari_app.TELCO_CARTS.clear()
+        kanthari_app.TELCO_ORDERS.clear()
         self.client = kanthari_app.app.test_client()
 
     def create_user(
@@ -95,6 +97,135 @@ class KanthariAppTests(unittest.TestCase):
             response.get_json(),
             {"status": "ok", "date": date.today().isoformat()},
         )
+
+    def test_telco_create_cart_requires_bearer_token(self) -> None:
+        response = self.client.post(
+            "/v1/carts",
+            json={"customerId": "CUST-100234", "currency": "USD"},
+        )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.get_json()["error"]["code"], "UNAUTHORIZED")
+
+    def test_telco_cart_lifecycle_with_items_promotion_and_checkout(self) -> None:
+        headers = {"Authorization": "Bearer test-token"}
+        create_response = self.client.post(
+            "/v1/carts",
+            headers=headers,
+            json={
+                "customerId": "CUST-100234",
+                "customerType": "RESIDENTIAL",
+                "channel": "WEB",
+                "currency": "USD",
+                "metadata": {"sessionId": "sess-abc-123", "storeId": "STORE-WEB-01"},
+            },
+        )
+        self.assertEqual(create_response.status_code, 201)
+        cart = create_response.get_json()
+        cart_id = cart["cartId"]
+        self.assertEqual(cart["status"], "ACTIVE")
+        self.assertEqual(cart["totals"]["grandTotal"], 0.0)
+
+        add_response = self.client.post(
+            f"/v1/carts/{cart_id}/items",
+            headers=headers,
+            json={
+                "items": [
+                    {
+                        "itemType": "DEVICE",
+                        "productId": "IPHONE-15-PRO-256-BLK",
+                        "quantity": 1,
+                        "msisdn": "NEW",
+                        "attributes": {"color": "Black Titanium"},
+                    },
+                    {
+                        "itemType": "PLAN",
+                        "productId": "UNLIMITED-PLUS",
+                        "quantity": 1,
+                        "msisdn": "NEW",
+                        "simType": "eSIM",
+                    },
+                ]
+            },
+        )
+        self.assertEqual(add_response.status_code, 200)
+        cart = add_response.get_json()
+        self.assertEqual(len(cart["items"]), 2)
+        self.assertEqual(cart["totals"]["recurringMonthlyTotal"], 85.0)
+        self.assertGreater(cart["totals"]["grandTotal"], 0)
+
+        promo_response = self.client.post(
+            f"/v1/carts/{cart_id}/promotions",
+            headers=headers,
+            json={"promoCode": "SUMMER25"},
+        )
+        self.assertEqual(promo_response.status_code, 200)
+        cart = promo_response.get_json()
+        self.assertEqual(cart["promotions"][0]["code"], "SUMMER25")
+        self.assertEqual(cart["promotions"][0]["discountAmount"], 299.75)
+
+        checkout_response = self.client.post(
+            f"/v1/carts/{cart_id}/checkout",
+            headers=headers,
+            json={
+                "shippingAddress": {
+                    "line1": "100 Market St",
+                    "city": "San Jose",
+                    "state": "CA",
+                    "postalCode": "95113",
+                    "country": "US",
+                },
+                "billingAddress": {
+                    "line1": "100 Market St",
+                    "city": "San Jose",
+                    "state": "CA",
+                    "postalCode": "95113",
+                    "country": "US",
+                },
+                "paymentMethod": {"type": "CREDIT_CARD", "tokenId": "tok_xxx"},
+                "termsAccepted": True,
+                "notes": "Leave at front desk",
+            },
+        )
+        self.assertEqual(checkout_response.status_code, 201)
+        order = checkout_response.get_json()
+        self.assertTrue(order["orderId"].startswith("ORD-"))
+        self.assertEqual(order["status"], "ORDER_CREATED")
+
+        get_response = self.client.get(f"/v1/carts/{cart_id}", headers=headers)
+        self.assertEqual(get_response.status_code, 200)
+        self.assertEqual(get_response.get_json()["status"], "CONVERTED")
+
+    def test_telco_update_and_remove_cart_item(self) -> None:
+        headers = {"Authorization": "Bearer test-token"}
+        cart = self.client.post(
+            "/carts",
+            headers=headers,
+            json={"customerId": "CUST-200000", "currency": "USD"},
+        ).get_json()
+        cart_id = cart["cartId"]
+        cart = self.client.post(
+            f"/carts/{cart_id}/items",
+            headers=headers,
+            json={"items": [{"itemType": "ACCESSORY", "productId": "CASE-IP15PRO-MAGSAFE", "quantity": 1}]},
+        ).get_json()
+        item_id = cart["items"][0]["itemId"]
+
+        update_response = self.client.patch(
+            f"/carts/{cart_id}/items/{item_id}",
+            headers=headers,
+            json={"quantity": 2, "attributes": {"color": "Smoke"}},
+        )
+        self.assertEqual(update_response.status_code, 200)
+        updated_cart = update_response.get_json()
+        self.assertEqual(updated_cart["items"][0]["quantity"], 2)
+        self.assertEqual(updated_cart["items"][0]["attributes"]["color"], "Smoke")
+
+        delete_response = self.client.delete(f"/carts/{cart_id}/items/{item_id}", headers=headers)
+        self.assertEqual(delete_response.status_code, 204)
+
+        cart_after_delete = self.client.get(f"/carts/{cart_id}", headers=headers).get_json()
+        self.assertEqual(cart_after_delete["items"], [])
 
     def test_signup_creates_user_and_starts_session(self) -> None:
         response = self.client.post(
@@ -316,7 +447,6 @@ class KanthariAppTests(unittest.TestCase):
         with self.client.session_transaction() as session_data:
             self.assertNotIn("user_id", session_data)
 
-    @unittest.expectedFailure
     def test_stripe_success_must_not_mark_another_users_order_paid(self) -> None:
         owner_id = self.create_user(email="owner@example.com")
         other_user_id = self.create_user(email="other@example.com")
@@ -369,7 +499,6 @@ class KanthariAppTests(unittest.TestCase):
 
         self.assertEqual(order["status"], "pending")
 
-    @unittest.expectedFailure
     def test_add_to_cart_rejects_variant_from_different_item(self) -> None:
         tomorrow = (date.today() + timedelta(days=1)).isoformat()
 
@@ -401,7 +530,6 @@ class KanthariAppTests(unittest.TestCase):
         with self.client.session_transaction() as session_data:
             self.assertEqual(session_data.get("cart"), [])
 
-    @unittest.expectedFailure
     def test_checkout_preserves_distinct_production_dates(self) -> None:
         user_id = self.create_user(email="schedule@example.com")
         self.login_session(user_id)

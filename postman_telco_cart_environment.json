@@ -1,0 +1,44 @@
+{
+  "id": "de318ffe-301f-4f31-84cd-f721fedc269d",
+  "name": "Telco Cart API - Local",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:5000/v1",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "bearerToken",
+      "value": "test-token",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "cartId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "itemId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "promoCode",
+      "value": "SUMMER25",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "orderId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment",
+  "_postman_exported_using": "Codex"
+}

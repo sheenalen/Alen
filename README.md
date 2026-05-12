@@ -24,6 +24,19 @@ python app.py
 
 Then open `http://127.0.0.1:5000`.
 
+On Windows, you can also run the foreground helper. Keep this PowerShell
+window open while using the app:
+
+```powershell
+.\serve-kanthari.ps1
+```
+
+If you want a separate server window:
+
+```powershell
+.\start-kanthari.ps1
+```
+
 ## Test
 
 ```powershell

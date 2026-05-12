@@ -1,0 +1,362 @@
+{
+  "info": {
+    "_postman_id": "8c76f18f-46b8-4e11-94d6-2f96255bc3d1",
+    "name": "Telco Cart API - Local",
+    "description": "Executable Postman collection for the Telco Cart API implemented in the local Kanthari Flask app.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{bearerToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:5000/v1"
+    },
+    {
+      "key": "bearerToken",
+      "value": "test-token"
+    },
+    {
+      "key": "cartId",
+      "value": ""
+    },
+    {
+      "key": "itemId",
+      "value": ""
+    },
+    {
+      "key": "promoCode",
+      "value": "SUMMER25"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Create Cart",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Cart created\", function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.collectionVariables.set(\"cartId\", body.cartId);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customerId\": \"CUST-100234\",\n  \"customerType\": \"RESIDENTIAL\",\n  \"channel\": \"WEB\",\n  \"currency\": \"USD\",\n  \"metadata\": {\n    \"sessionId\": \"sess-abc-123\",\n    \"storeId\": \"STORE-WEB-01\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/carts",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "carts"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "2. Get Cart",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/carts/{{cartId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "carts",
+            "{{cartId}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "3. Add Device and Plan",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Items added\", function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "if (body.items && body.items.length > 0) {",
+              "  pm.collectionVariables.set(\"itemId\", body.items[0].itemId);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"items\": [\n    {\n      \"itemType\": \"DEVICE\",\n      \"productId\": \"IPHONE-15-PRO-256-BLK\",\n      \"quantity\": 1,\n      \"msisdn\": \"NEW\",\n      \"attributes\": {\n        \"color\": \"Black Titanium\",\n        \"storage\": \"256GB\"\n      }\n    },\n    {\n      \"itemType\": \"PLAN\",\n      \"productId\": \"UNLIMITED-PLUS\",\n      \"quantity\": 1,\n      \"msisdn\": \"NEW\",\n      \"simType\": \"eSIM\"\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/carts/{{cartId}}/items",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "carts",
+            "{{cartId}}",
+            "items"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4. Add Accessory",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Accessory added\", function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "const accessory = body.items.find(item => item.productId === \"CASE-IP15PRO-MAGSAFE\");",
+              "if (accessory) {",
+              "  pm.collectionVariables.set(\"itemId\", accessory.itemId);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"items\": [\n    {\n      \"itemType\": \"ACCESSORY\",\n      \"productId\": \"CASE-IP15PRO-MAGSAFE\",\n      \"quantity\": 1,\n      \"attributes\": {\n        \"color\": \"Clear\"\n      }\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/carts/{{cartId}}/items",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "carts",
+            "{{cartId}}",
+            "items"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "5. Update Item",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"quantity\": 2,\n  \"attributes\": {\n    \"color\": \"Smoke\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/carts/{{cartId}}/items/{{itemId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "carts",
+            "{{cartId}}",
+            "items",
+            "{{itemId}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "6. Apply Promotion",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"promoCode\": \"{{promoCode}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/carts/{{cartId}}/promotions",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "carts",
+            "{{cartId}}",
+            "promotions"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "7. Remove Promotion",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/carts/{{cartId}}/promotions/{{promoCode}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "carts",
+            "{{cartId}}",
+            "promotions",
+            "{{promoCode}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "8. Reapply Promotion",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"promoCode\": \"{{promoCode}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/carts/{{cartId}}/promotions",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "carts",
+            "{{cartId}}",
+            "promotions"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "9. Checkout Cart",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Order created\", function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.collectionVariables.set(\"orderId\", body.orderId);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"shippingAddress\": {\n    \"line1\": \"100 Market St\",\n    \"city\": \"San Jose\",\n    \"state\": \"CA\",\n    \"postalCode\": \"95113\",\n    \"country\": \"US\"\n  },\n  \"billingAddress\": {\n    \"line1\": \"100 Market St\",\n    \"city\": \"San Jose\",\n    \"state\": \"CA\",\n    \"postalCode\": \"95113\",\n    \"country\": \"US\"\n  },\n  \"paymentMethod\": {\n    \"type\": \"CREDIT_CARD\",\n    \"tokenId\": \"tok_xxx\"\n  },\n  \"termsAccepted\": true,\n  \"notes\": \"Postman test checkout\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/carts/{{cartId}}/checkout",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "carts",
+            "{{cartId}}",
+            "checkout"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "10. Delete Cart",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/carts/{{cartId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "carts",
+            "{{cartId}}"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

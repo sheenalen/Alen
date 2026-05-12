@@ -106,6 +106,23 @@ textarea:focus {
   box-shadow: 0 16px 32px rgba(0, 0, 0, 0.24);
 }
 
+.kanthari-chatbot {
+  pointer-events: none;
+}
+
+.kanthari-chatbot > * {
+  pointer-events: auto;
+}
+
+@media (max-width: 640px) {
+  .kanthari-chatbot {
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    max-width: none;
+  }
+}
+
 .kanthari-fade-up {
   animation: kanthariFadeUp 500ms ease both;
 }
