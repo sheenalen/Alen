@@ -4,8 +4,9 @@ import hashlib
 import os
 import re
 import sqlite3
+import uuid
 from collections import defaultdict
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from functools import wraps
 from pathlib import Path
 from typing import Any
@@ -34,6 +35,81 @@ MENU_MEDIA = {
         "image_source": item.get("image_source"),
     }
     for item in MENU_ITEMS
+}
+
+TELCO_TAX_RATE = 0.0825
+TELCO_CART_TTL_HOURS = 48
+TELCO_CARTS: dict[str, dict[str, Any]] = {}
+TELCO_ORDERS: dict[str, dict[str, Any]] = {}
+TELCO_PRODUCTS: dict[str, dict[str, Any]] = {
+    "IPHONE-15-PRO-256-BLK": {
+        "name": "iPhone 15 Pro 256GB Black Titanium",
+        "itemType": "DEVICE",
+        "sku": "APL-IP15P-256-BLK",
+        "stock": 12,
+        "pricing": {
+            "priceType": "ONE_TIME",
+            "unitPrice": 1199.00,
+            "installmentPlan": {"months": 24, "monthlyAmount": 49.96, "downPayment": 0.00},
+        },
+        "attributes": {"color": "Black Titanium", "storage": "256GB", "network": "5G"},
+        "creditCheckRequired": True,
+    },
+    "GALAXY-S24-ULTRA-512": {
+        "name": "Samsung Galaxy S24 Ultra 512GB Titanium Gray",
+        "itemType": "DEVICE",
+        "sku": "SMS-S24U-512-GRY",
+        "stock": 8,
+        "pricing": {
+            "priceType": "ONE_TIME",
+            "unitPrice": 1299.99,
+            "installmentPlan": {"months": 24, "monthlyAmount": 54.17, "downPayment": 0.00},
+        },
+        "attributes": {"color": "Titanium Gray", "storage": "512GB", "network": "5G"},
+        "creditCheckRequired": True,
+    },
+    "UNLIMITED-PLUS": {
+        "name": "Unlimited Plus 5G Plan",
+        "itemType": "PLAN",
+        "sku": "PLAN-UNL-PLUS",
+        "stock": 9999,
+        "pricing": {"priceType": "RECURRING", "monthlyPrice": 85.00, "billingCycle": "MONTHLY", "contractTermMonths": 24},
+        "attributes": {"data": "Unlimited", "hotspot": "50GB", "roaming": "North America included"},
+        "creditCheckRequired": True,
+    },
+    "INTL-CALLING": {
+        "name": "International Calling Add-On",
+        "itemType": "ADDON",
+        "sku": "ADDON-INTL-CALL",
+        "stock": 9999,
+        "pricing": {"priceType": "RECURRING", "monthlyPrice": 15.00, "billingCycle": "MONTHLY"},
+        "attributes": {"minutes": "Unlimited to 80+ countries"},
+        "creditCheckRequired": False,
+    },
+    "ESIM-5G": {
+        "name": "5G eSIM Activation",
+        "itemType": "SIM",
+        "sku": "SIM-ESIM-5G",
+        "stock": 9999,
+        "pricing": {"priceType": "ONE_TIME", "unitPrice": 0.00},
+        "attributes": {"simType": "eSIM"},
+        "creditCheckRequired": False,
+    },
+    "CASE-IP15PRO-MAGSAFE": {
+        "name": "MagSafe Protective Case for iPhone 15 Pro",
+        "itemType": "ACCESSORY",
+        "sku": "ACC-CASE-IP15P-MS",
+        "stock": 25,
+        "pricing": {"priceType": "ONE_TIME", "unitPrice": 49.99},
+        "attributes": {"color": "Clear", "material": "Polycarbonate"},
+        "creditCheckRequired": False,
+    },
+}
+
+TELCO_PROMOTIONS: dict[str, dict[str, Any]] = {
+    "SUMMER25": {"description": "Summer device and accessory savings", "type": "PERCENT", "value": 25.0},
+    "TRADEIN-200": {"description": "Trade-in credit for eligible smartphones", "type": "AMOUNT", "value": 200.0},
+    "SIMFREE": {"description": "Free SIM or eSIM activation", "type": "SIM_FREE", "value": 0.0},
 }
 
 
@@ -166,6 +242,90 @@ def add_item_to_cart(item: sqlite3.Row, variant: sqlite3.Row, quantity: int, req
     )
     session.modified = True
     return True, f"Added {quantity} x {item['name']} ({variant['name']}) for {requested_date.isoformat()}."
+
+
+def cart_groups_by_date(cart: list[dict[str, Any]]) -> list[tuple[str, list[dict[str, Any]]]]:
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for item in cart:
+        grouped[item["production_date"]].append(item)
+    return sorted(grouped.items(), key=lambda group: group[0])
+
+
+def create_order_record(
+    *,
+    user: sqlite3.Row,
+    items: list[dict[str, Any]],
+    production_date: str,
+    customer_phone: str,
+    fulfillment_type: str,
+    delivery_address: str | None,
+    zip_code: str | None,
+    delivery_fee: float,
+    pickup_slot_id: int | None,
+    payment_method: str,
+    notes: str,
+    status: str,
+) -> int:
+    subtotal = sum(item["quantity"] * item["unit_price"] for item in items)
+    total = subtotal + delivery_fee
+    food_cost = round(total * 0.40, 2)
+    gross_profit = round(total - food_cost, 2)
+    transaction_reference = f"{payment_method[:3].upper()}-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+
+    order_id = execute_db(
+        """
+        INSERT INTO orders (
+            user_id, customer_name, customer_email, customer_phone, fulfillment_type,
+            delivery_address, zip_code, delivery_fee, pickup_slot_id, production_date,
+            payment_method, transaction_reference, subtotal, total_amount, food_cost,
+            gross_profit, status, notes, created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            user["id"],
+            user["full_name"],
+            user["email"],
+            customer_phone,
+            fulfillment_type,
+            delivery_address,
+            zip_code,
+            delivery_fee,
+            pickup_slot_id,
+            production_date,
+            payment_method,
+            transaction_reference,
+            subtotal,
+            total,
+            food_cost,
+            gross_profit,
+            status,
+            notes,
+            datetime.now().isoformat(),
+        ),
+    )
+
+    for item in items:
+        execute_db(
+            """
+            INSERT INTO order_items (
+                order_id, menu_item_id, variant_id, item_name, variant_name,
+                quantity, unit_price, line_total
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                order_id,
+                item["menu_item_id"],
+                item["variant_id"],
+                item["item_name"],
+                item["variant_name"],
+                item["quantity"],
+                item["unit_price"],
+                item["quantity"] * item["unit_price"],
+            ),
+        )
+    return order_id
 
 
 def menu_catalog() -> list[dict[str, Any]]:
@@ -304,8 +464,237 @@ def send_notification(order_id: int, subject: str, body: str) -> None:
     print(f"[notification] order={order_id} subject={subject}\n{body}")
 
 
+def telco_now() -> datetime:
+    return datetime.now(timezone.utc).replace(microsecond=0)
+
+
+def telco_timestamp(moment: datetime | None = None) -> str:
+    utc_moment = (moment or telco_now()).astimezone(timezone.utc)
+    return utc_moment.replace(tzinfo=None).isoformat() + "Z"
+
+
+def telco_error(status_code: int, code: str, message: str, details: dict[str, Any] | None = None):
+    return jsonify(
+        {
+            "error": {
+                "code": code,
+                "message": message,
+                "details": details or {},
+                "traceId": f"trace-{uuid.uuid4().hex[:8]}",
+            }
+        }
+    ), status_code
+
+
+def telco_require_bearer():
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer ") or not auth_header.removeprefix("Bearer ").strip():
+        return telco_error(401, "UNAUTHORIZED", "Bearer token is required.")
+    return None
+
+
+def telco_json() -> dict[str, Any] | None:
+    payload = request.get_json(silent=True)
+    return payload if isinstance(payload, dict) else None
+
+
+def telco_get_cart(cart_id: str) -> dict[str, Any] | None:
+    return TELCO_CARTS.get(cart_id)
+
+
+def telco_cart_response(cart: dict[str, Any]) -> dict[str, Any]:
+    telco_recalculate_cart(cart)
+    return cart
+
+
+def telco_new_cart_id() -> str:
+    return f"CART-{uuid.uuid4().hex[:8]}"
+
+
+def telco_new_item_id(cart: dict[str, Any]) -> str:
+    return f"ITEM-{len(cart['items']) + 1:03d}"
+
+
+def telco_product_for(add_item: dict[str, Any]) -> dict[str, Any] | None:
+    product = TELCO_PRODUCTS.get(str(add_item.get("productId", "")))
+    if product is None:
+        return None
+    expected_type = add_item.get("itemType")
+    if expected_type and expected_type != product["itemType"]:
+        return None
+    return product
+
+
+def telco_build_pricing(product: dict[str, Any], item_input: dict[str, Any], quantity: int) -> dict[str, Any]:
+    pricing = dict(product["pricing"])
+    pricing.update(item_input.get("pricing") or {})
+    price_type = pricing.get("priceType", "ONE_TIME")
+    if price_type == "RECURRING":
+        line_total = quantity * float(pricing.get("monthlyPrice", 0.0))
+    else:
+        line_total = quantity * float(pricing.get("unitPrice", 0.0))
+    pricing["lineTotal"] = round(line_total, 2)
+    return pricing
+
+
+def telco_build_item(cart: dict[str, Any], item_input: dict[str, Any]) -> tuple[dict[str, Any] | None, tuple[Any, int] | None]:
+    quantity = int(item_input.get("quantity") or 0)
+    if quantity < 1:
+        return None, telco_error(400, "INVALID_QUANTITY", "Item quantity must be at least 1.")
+
+    product = telco_product_for(item_input)
+    if product is None:
+        return None, telco_error(400, "UNKNOWN_PRODUCT", "Product ID and item type must match a known telco product.")
+    if product["stock"] < quantity:
+        return None, telco_error(409, "ITEM_OUT_OF_STOCK", "Selected product does not have enough stock.")
+
+    parent_item_id = item_input.get("parentItemId")
+    if parent_item_id and not any(item["itemId"] == parent_item_id for item in cart["items"]):
+        return None, telco_error(409, "PARENT_ITEM_NOT_FOUND", "Parent item must exist in the cart before adding a dependent item.")
+
+    item_id = telco_new_item_id(cart)
+    attributes = dict(product.get("attributes", {}))
+    attributes.update(item_input.get("attributes") or {})
+    item = {
+        "itemId": item_id,
+        "itemType": product["itemType"],
+        "productId": item_input["productId"],
+        "sku": item_input.get("sku") or product["sku"],
+        "name": product["name"],
+        "quantity": quantity,
+        "parentItemId": parent_item_id,
+        "linkedItems": [],
+        "msisdn": item_input.get("msisdn"),
+        "simType": item_input.get("simType") or attributes.get("simType"),
+        "pricing": telco_build_pricing(product, item_input, quantity),
+        "attributes": attributes,
+        "eligibility": {
+            "stockAvailable": True,
+            "creditCheckRequired": bool(product.get("creditCheckRequired")),
+            "eligibilityMessages": ["Eligible for online checkout"],
+        },
+    }
+    return item, None
+
+
+def telco_recalculate_item(item: dict[str, Any]) -> None:
+    pricing = item["pricing"]
+    quantity = int(item["quantity"])
+    if pricing.get("priceType") == "RECURRING":
+        pricing["lineTotal"] = round(quantity * float(pricing.get("monthlyPrice", 0.0)), 2)
+    else:
+        pricing["lineTotal"] = round(quantity * float(pricing.get("unitPrice", 0.0)), 2)
+
+
+def telco_recalculate_cart(cart: dict[str, Any]) -> None:
+    for item in cart["items"]:
+        item["linkedItems"] = [
+            linked["itemId"]
+            for linked in cart["items"]
+            if linked.get("parentItemId") == item["itemId"]
+        ]
+        telco_recalculate_item(item)
+
+    one_time_subtotal = sum(
+        item["pricing"]["lineTotal"]
+        for item in cart["items"]
+        if item["pricing"].get("priceType") != "RECURRING"
+    )
+    recurring_monthly_total = sum(
+        item["pricing"]["lineTotal"]
+        for item in cart["items"]
+        if item["pricing"].get("priceType") == "RECURRING"
+    )
+
+    for promotion in cart["promotions"]:
+        promotion["appliedTo"] = [
+            item["itemId"]
+            for item in cart["items"]
+            if item["pricing"].get("priceType") != "RECURRING"
+        ]
+
+    discount = min(sum(promo["discountAmount"] for promo in cart["promotions"]), one_time_subtotal)
+    taxable = max(one_time_subtotal - discount, 0.0)
+    tax = round(taxable * TELCO_TAX_RATE, 2)
+    one_time_total = round(taxable + tax, 2)
+    cart["totals"] = {
+        "subTotal": round(one_time_subtotal + recurring_monthly_total, 2),
+        "discount": round(discount, 2),
+        "tax": tax,
+        "oneTimeTotal": one_time_total,
+        "recurringMonthlyTotal": round(recurring_monthly_total, 2),
+        "grandTotal": one_time_total,
+    }
+
+
+def telco_apply_promotion_to_cart(cart: dict[str, Any], promo_code: str) -> tuple[bool, str]:
+    code = promo_code.strip().upper()
+    promotion = TELCO_PROMOTIONS.get(code)
+    if promotion is None:
+        return False, "Unknown promotion code."
+    if any(existing["code"] == code for existing in cart["promotions"]):
+        return False, "Promotion code is already applied."
+
+    eligible_items = [item for item in cart["items"] if item["pricing"].get("priceType") != "RECURRING"]
+    eligible_total = sum(item["pricing"]["lineTotal"] for item in eligible_items)
+    if promotion["type"] == "PERCENT":
+        discount = round(eligible_total * (promotion["value"] / 100), 2)
+    elif promotion["type"] == "AMOUNT":
+        discount = min(float(promotion["value"]), eligible_total)
+    elif promotion["type"] == "SIM_FREE":
+        discount = sum(
+            item["pricing"]["lineTotal"]
+            for item in cart["items"]
+            if item["itemType"] == "SIM"
+        )
+    else:
+        discount = 0.0
+
+    if discount <= 0:
+        return False, "Promotion does not apply to the current cart."
+
+    cart["promotions"].append(
+        {
+            "code": code,
+            "description": promotion["description"],
+            "discountAmount": round(discount, 2),
+            "appliedTo": [item["itemId"] for item in eligible_items],
+        }
+    )
+    return True, ""
+
+
+def telco_touch_cart(cart: dict[str, Any]) -> None:
+    cart["updatedAt"] = telco_timestamp()
+
+
+def telco_prefix_routes(rule: str, **options):
+    def decorator(view):
+        app.route(rule, **options)(view)
+        app.route(f"/v1{rule}", **options)(view)
+        return view
+
+    return decorator
+
+
 def stripe_enabled() -> bool:
     return bool(stripe and STRIPE_SECRET_KEY and STRIPE_PUBLISHABLE_KEY)
+
+
+def accessible_order_ids(order_ids: list[int], user: sqlite3.Row) -> list[int]:
+    if not order_ids:
+        return []
+    if user["is_admin"]:
+        rows = query_db(
+            f"SELECT id FROM orders WHERE id IN ({','.join('?' for _ in order_ids)})",
+            tuple(order_ids),
+        )
+    else:
+        rows = query_db(
+            f"SELECT id FROM orders WHERE user_id = ? AND id IN ({','.join('?' for _ in order_ids)})",
+            (user["id"], *order_ids),
+        )
+    return [row["id"] for row in rows]
 
 
 def create_schema() -> None:
@@ -585,7 +974,7 @@ def chat_assistant():
 def add_to_cart():
     item = query_db("SELECT * FROM menu_items WHERE id = ?", (request.form["menu_item_id"],), one=True)
     variant = query_db("SELECT * FROM menu_variants WHERE id = ?", (request.form["variant_id"],), one=True)
-    if item is None or variant is None:
+    if item is None or variant is None or variant["menu_item_id"] != item["id"]:
         flash("Menu selection not found.", "error")
         return redirect(url_for("menu"))
 
@@ -629,8 +1018,6 @@ def checkout():
     fulfillment_type = request.form["fulfillment_type"]
     payment_method = request.form["payment_method"]
     notes = request.form.get("notes", "").strip()
-    production_date = max(item["production_date"] for item in cart)
-    subtotal = sum(item["quantity"] * item["unit_price"] for item in cart)
     delivery_fee = 0.0
     delivery_address = None
     zip_code = None
@@ -647,72 +1034,43 @@ def checkout():
     else:
         pickup_slot_id = int(request.form["pickup_slot_id"])
 
-    total = subtotal + delivery_fee
-    food_cost = round(total * 0.40, 2)
-    gross_profit = round(total - food_cost, 2)
     user = current_user()
-    transaction_reference = f"{payment_method[:3].upper()}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
     status = "pending"
-
-    order_id = execute_db(
-        """
-        INSERT INTO orders (
-            user_id, customer_name, customer_email, customer_phone, fulfillment_type,
-            delivery_address, zip_code, delivery_fee, pickup_slot_id, production_date,
-            payment_method, transaction_reference, subtotal, total_amount, food_cost,
-            gross_profit, status, notes, created_at
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
-            user["id"],
-            user["full_name"],
-            user["email"],
-            request.form["customer_phone"].strip(),
-            fulfillment_type,
-            delivery_address,
-            zip_code,
-            delivery_fee,
-            pickup_slot_id,
-            production_date,
-            payment_method,
-            transaction_reference,
-            subtotal,
-            total,
-            food_cost,
-            gross_profit,
-            status,
-            notes,
-            datetime.now().isoformat(),
-        ),
-    )
-
-    for item in cart:
-        execute_db(
-            """
-            INSERT INTO order_items (
-                order_id, menu_item_id, variant_id, item_name, variant_name,
-                quantity, unit_price, line_total
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                order_id,
-                item["menu_item_id"],
-                item["variant_id"],
-                item["item_name"],
-                item["variant_name"],
-                item["quantity"],
-                item["unit_price"],
-                item["quantity"] * item["unit_price"],
+    customer_phone = request.form["customer_phone"].strip()
+    grouped_cart = cart_groups_by_date(cart)
+    created_orders = [
+        {
+            "id": create_order_record(
+                user=user,
+                items=items,
+                production_date=production_date,
+                customer_phone=customer_phone,
+                fulfillment_type=fulfillment_type,
+                delivery_address=delivery_address,
+                zip_code=zip_code,
+                delivery_fee=delivery_fee,
+                pickup_slot_id=pickup_slot_id,
+                payment_method=payment_method,
+                notes=notes,
+                status=status,
             ),
-        )
+            "production_date": production_date,
+            "items": items,
+            "delivery_fee": delivery_fee,
+            "total": sum(item["quantity"] * item["unit_price"] for item in items) + delivery_fee,
+        }
+        for production_date, items in grouped_cart
+    ]
 
     if payment_method == "credit_card" and stripe_enabled():
         stripe.api_key = STRIPE_SECRET_KEY
         checkout_session = stripe.checkout.Session.create(
             mode="payment",
-            success_url=url_for("stripe_success", order_id=order_id, _external=True),
+            success_url=url_for(
+                "stripe_success",
+                order_ids=",".join(str(order["id"]) for order in created_orders),
+                _external=True,
+            ),
             cancel_url=url_for("orders", _external=True),
             line_items=[
                 {
@@ -740,41 +1098,308 @@ def checkout():
                 else []
             ),
             customer_email=user["email"],
-            metadata={"order_id": str(order_id)},
+            metadata={"order_ids": ",".join(str(order["id"]) for order in created_orders)},
         )
-        execute_db(
-            "UPDATE orders SET transaction_reference = ? WHERE id = ?",
-            (checkout_session.id, order_id),
-        )
+        for order in created_orders:
+            execute_db(
+                "UPDATE orders SET transaction_reference = ? WHERE id = ?",
+                (checkout_session.id, order["id"]),
+            )
         session["cart"] = []
         return redirect(checkout_session.url, code=303)
 
     if payment_method == "credit_card":
         status = "paid"
-        execute_db("UPDATE orders SET status = ? WHERE id = ?", (status, order_id))
+        for order in created_orders:
+            execute_db("UPDATE orders SET status = ? WHERE id = ?", (status, order["id"]))
 
-    send_notification(
-        order_id,
-        "Order confirmation",
-        f"Your order #{order_id} has been placed. Payment method: {payment_method}. Total: ${total:.2f}.",
-    )
+    for order in created_orders:
+        send_notification(
+            order["id"],
+            "Order confirmation",
+            f"Your order #{order['id']} has been placed for {order['production_date']}. Payment method: {payment_method}. Total: ${order['total']:.2f}.",
+        )
     session["cart"] = []
-    flash(f"Order #{order_id} placed successfully.", "success")
+    if len(created_orders) == 1:
+        flash(f"Order #{created_orders[0]['id']} placed successfully.", "success")
+    else:
+        flash(
+            "Orders placed successfully for "
+            + ", ".join(order["production_date"] for order in created_orders)
+            + ".",
+            "success",
+        )
+    return redirect(url_for("orders"))
+
+
+@app.route("/stripe/success")
+@login_required
+def stripe_success():
+    raw_ids = request.args.get("order_ids", "").strip()
+    order_ids = [int(value) for value in raw_ids.split(",") if value.isdigit()]
+    return finalize_stripe_success(order_ids)
+
+
+def finalize_stripe_success(order_ids: list[int]):
+    user = current_user()
+    allowed_ids = accessible_order_ids(order_ids, user) if user else []
+    if len(allowed_ids) != len(order_ids):
+        return ("Forbidden", 403)
+
+    for order_id in allowed_ids:
+        execute_db("UPDATE orders SET status = 'paid' WHERE id = ?", (order_id,))
+        order = query_db("SELECT total_amount FROM orders WHERE id = ?", (order_id,), one=True)
+        send_notification(
+            order_id,
+            "Stripe payment received",
+            f"Order #{order_id} has been paid successfully. Total: ${order['total_amount']:.2f}.",
+        )
+    flash(f"Stripe payment recorded for {len(allowed_ids)} order(s).", "success")
     return redirect(url_for("orders"))
 
 
 @app.route("/stripe/success/<int:order_id>")
 @login_required
-def stripe_success(order_id: int):
-    execute_db("UPDATE orders SET status = 'paid' WHERE id = ?", (order_id,))
-    order = query_db("SELECT total_amount FROM orders WHERE id = ?", (order_id,), one=True)
-    send_notification(
-        order_id,
-        "Stripe payment received",
-        f"Order #{order_id} has been paid successfully. Total: ${order['total_amount']:.2f}.",
-    )
-    flash(f"Stripe payment recorded for order #{order_id}.", "success")
-    return redirect(url_for("orders"))
+def stripe_success_single(order_id: int):
+    return finalize_stripe_success([order_id])
+
+
+@telco_prefix_routes("/carts", methods=["POST"])
+def telco_create_cart():
+    auth_error = telco_require_bearer()
+    if auth_error:
+        return auth_error
+
+    payload = telco_json()
+    if payload is None:
+        return telco_error(400, "INVALID_JSON", "Request body must be a JSON object.")
+    if not payload.get("customerId") or not payload.get("currency"):
+        return telco_error(400, "MISSING_REQUIRED_FIELD", "customerId and currency are required.")
+
+    now = telco_now()
+    cart_id = telco_new_cart_id()
+    cart = {
+        "cartId": cart_id,
+        "customerId": payload["customerId"],
+        "customerType": payload.get("customerType", "RESIDENTIAL"),
+        "channel": payload.get("channel", "WEB"),
+        "status": "ACTIVE",
+        "currency": payload["currency"],
+        "items": [],
+        "promotions": [],
+        "totals": {
+            "subTotal": 0.0,
+            "discount": 0.0,
+            "tax": 0.0,
+            "oneTimeTotal": 0.0,
+            "recurringMonthlyTotal": 0.0,
+            "grandTotal": 0.0,
+        },
+        "metadata": payload.get("metadata") or {},
+        "createdAt": telco_timestamp(now),
+        "updatedAt": telco_timestamp(now),
+        "expiresAt": telco_timestamp(now + timedelta(hours=TELCO_CART_TTL_HOURS)),
+    }
+    TELCO_CARTS[cart_id] = cart
+    return jsonify(cart), 201
+
+
+@telco_prefix_routes("/carts/<cart_id>", methods=["GET"])
+def telco_get_cart_route(cart_id: str):
+    auth_error = telco_require_bearer()
+    if auth_error:
+        return auth_error
+
+    cart = telco_get_cart(cart_id)
+    if cart is None:
+        return telco_error(404, "CART_NOT_FOUND", "Cart was not found.")
+    return jsonify(telco_cart_response(cart))
+
+
+@telco_prefix_routes("/carts/<cart_id>", methods=["DELETE"])
+def telco_delete_cart(cart_id: str):
+    auth_error = telco_require_bearer()
+    if auth_error:
+        return auth_error
+
+    cart = telco_get_cart(cart_id)
+    if cart is None:
+        return telco_error(404, "CART_NOT_FOUND", "Cart was not found.")
+    cart["status"] = "ABANDONED"
+    TELCO_CARTS.pop(cart_id, None)
+    return "", 204
+
+
+@telco_prefix_routes("/carts/<cart_id>/items", methods=["POST"])
+def telco_add_cart_items(cart_id: str):
+    auth_error = telco_require_bearer()
+    if auth_error:
+        return auth_error
+
+    cart = telco_get_cart(cart_id)
+    if cart is None:
+        return telco_error(404, "CART_NOT_FOUND", "Cart was not found.")
+    if cart["status"] != "ACTIVE":
+        return telco_error(409, "CART_NOT_ACTIVE", "Only active carts can be modified.")
+
+    payload = telco_json()
+    if payload is None or not isinstance(payload.get("items"), list) or not payload["items"]:
+        return telco_error(400, "INVALID_ITEMS", "items must contain at least one item.")
+
+    built_items = []
+    for item_input in payload["items"]:
+        if not isinstance(item_input, dict) or not all(item_input.get(field) for field in ["itemType", "productId", "quantity"]):
+            return telco_error(400, "MISSING_REQUIRED_FIELD", "Each item requires itemType, productId, and quantity.")
+        item, error = telco_build_item(cart, item_input)
+        if error:
+            return error
+        built_items.append(item)
+
+    cart["items"].extend(built_items)
+    telco_touch_cart(cart)
+    return jsonify(telco_cart_response(cart))
+
+
+@telco_prefix_routes("/carts/<cart_id>/items/<item_id>", methods=["PATCH"])
+def telco_update_cart_item(cart_id: str, item_id: str):
+    auth_error = telco_require_bearer()
+    if auth_error:
+        return auth_error
+
+    cart = telco_get_cart(cart_id)
+    if cart is None:
+        return telco_error(404, "CART_NOT_FOUND", "Cart was not found.")
+    item = next((cart_item for cart_item in cart["items"] if cart_item["itemId"] == item_id), None)
+    if item is None:
+        return telco_error(404, "ITEM_NOT_FOUND", "Cart item was not found.")
+
+    payload = telco_json()
+    if payload is None:
+        return telco_error(400, "INVALID_JSON", "Request body must be a JSON object.")
+    if "quantity" in payload:
+        quantity = int(payload["quantity"])
+        if quantity < 1:
+            return telco_error(400, "INVALID_QUANTITY", "Item quantity must be at least 1.")
+        item["quantity"] = quantity
+    if "attributes" in payload:
+        item["attributes"].update(payload.get("attributes") or {})
+    if "pricing" in payload:
+        item["pricing"].update(payload.get("pricing") or {})
+
+    cart["promotions"] = []
+    telco_touch_cart(cart)
+    return jsonify(telco_cart_response(cart))
+
+
+@telco_prefix_routes("/carts/<cart_id>/items/<item_id>", methods=["DELETE"])
+def telco_remove_cart_item(cart_id: str, item_id: str):
+    auth_error = telco_require_bearer()
+    if auth_error:
+        return auth_error
+
+    cart = telco_get_cart(cart_id)
+    if cart is None:
+        return telco_error(404, "CART_NOT_FOUND", "Cart was not found.")
+    if not any(item["itemId"] == item_id for item in cart["items"]):
+        return telco_error(404, "ITEM_NOT_FOUND", "Cart item was not found.")
+
+    cart["items"] = [
+        item
+        for item in cart["items"]
+        if item["itemId"] != item_id and item.get("parentItemId") != item_id
+    ]
+    cart["promotions"] = []
+    telco_touch_cart(cart)
+    telco_recalculate_cart(cart)
+    return "", 204
+
+
+@telco_prefix_routes("/carts/<cart_id>/promotions", methods=["POST"])
+def telco_apply_promotion(cart_id: str):
+    auth_error = telco_require_bearer()
+    if auth_error:
+        return auth_error
+
+    cart = telco_get_cart(cart_id)
+    if cart is None:
+        return telco_error(404, "CART_NOT_FOUND", "Cart was not found.")
+    payload = telco_json()
+    if payload is None or not payload.get("promoCode"):
+        return telco_error(400, "MISSING_PROMO_CODE", "promoCode is required.")
+
+    telco_recalculate_cart(cart)
+    applied, message = telco_apply_promotion_to_cart(cart, payload["promoCode"])
+    if not applied:
+        return telco_error(400, "PROMOTION_NOT_APPLIED", message)
+
+    telco_touch_cart(cart)
+    return jsonify(telco_cart_response(cart))
+
+
+@telco_prefix_routes("/carts/<cart_id>/promotions/<promo_code>", methods=["DELETE"])
+def telco_remove_promotion(cart_id: str, promo_code: str):
+    auth_error = telco_require_bearer()
+    if auth_error:
+        return auth_error
+
+    cart = telco_get_cart(cart_id)
+    if cart is None:
+        return telco_error(404, "CART_NOT_FOUND", "Cart was not found.")
+
+    before_count = len(cart["promotions"])
+    cart["promotions"] = [
+        promotion
+        for promotion in cart["promotions"]
+        if promotion["code"] != promo_code.upper()
+    ]
+    if len(cart["promotions"]) == before_count:
+        return telco_error(404, "PROMOTION_NOT_FOUND", "Promotion was not found on this cart.")
+
+    telco_touch_cart(cart)
+    return jsonify(telco_cart_response(cart))
+
+
+@telco_prefix_routes("/carts/<cart_id>/checkout", methods=["POST"])
+def telco_checkout_cart(cart_id: str):
+    auth_error = telco_require_bearer()
+    if auth_error:
+        return auth_error
+
+    cart = telco_get_cart(cart_id)
+    if cart is None:
+        return telco_error(404, "CART_NOT_FOUND", "Cart was not found.")
+    if cart["status"] != "ACTIVE":
+        return telco_error(409, "CART_NOT_ACTIVE", "Only active carts can be checked out.")
+    if not cart["items"]:
+        return telco_error(409, "EMPTY_CART", "Cart must contain at least one item before checkout.")
+
+    payload = telco_json()
+    required_fields = ["shippingAddress", "billingAddress", "paymentMethod", "termsAccepted"]
+    if payload is None or any(field not in payload for field in required_fields):
+        return telco_error(400, "MISSING_REQUIRED_FIELD", "shippingAddress, billingAddress, paymentMethod, and termsAccepted are required.")
+    if payload.get("termsAccepted") is not True:
+        return telco_error(400, "TERMS_NOT_ACCEPTED", "termsAccepted must be true.")
+    if not isinstance(payload.get("paymentMethod"), dict) or not payload["paymentMethod"].get("type"):
+        return telco_error(400, "INVALID_PAYMENT_METHOD", "paymentMethod.type is required.")
+
+    telco_recalculate_cart(cart)
+    now = telco_timestamp()
+    order_id = f"ORD-{date.today().year}-{len(TELCO_ORDERS) + 1:08d}"
+    order = {
+        "orderId": order_id,
+        "cartId": cart_id,
+        "status": "ORDER_CREATED",
+        "totals": cart["totals"],
+        "createdAt": now,
+        "shippingAddress": payload["shippingAddress"],
+        "billingAddress": payload["billingAddress"],
+        "paymentMethod": payload["paymentMethod"],
+        "notes": payload.get("notes"),
+    }
+    TELCO_ORDERS[order_id] = order
+    cart["status"] = "CONVERTED"
+    telco_touch_cart(cart)
+    return jsonify({key: order[key] for key in ["orderId", "cartId", "status", "totals", "createdAt"]}), 201
 
 
 @app.route("/orders")
